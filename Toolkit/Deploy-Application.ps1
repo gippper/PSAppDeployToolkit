@@ -116,6 +116,9 @@ Try {
     [String]$appScriptVersion = '1.0.0'
     [String]$appScriptDate = 'XX/XX/20XX'
     [String]$appScriptAuthor = '<author name>'
+	[String]$appWinGetName = ''  # 'Microsoft .NET Runtime 8.0'
+	[String]$appWinGetID = ''  # 'Microsoft.DotNet.Runtime.8'
+	
     ##*===============================================
     ## Variables: Install Titles (Only set here to override defaults set by the toolkit)
     [String]$installName = ''
@@ -168,7 +171,33 @@ Try {
             Exit $mainExitCode
         }
     }
-
+	## Dot source the Custom App Deploy Toolkit Functions
+    Try {
+        [String]$moduleAppDeployToolkitCustom = "$scriptDirectory\AppDeployToolkit\AppDeployToolkitCustom.ps1"
+        If (-not (Test-Path -LiteralPath $moduleAppDeployToolkitCustom -PathType 'Leaf')) {
+            Throw "Module does not exist at the specified location [$moduleAppDeployToolkitCustom]."
+        }
+        If ($DisableLogging) {
+            . $moduleAppDeployToolkitCustom -DisableLogging
+        }
+        Else {
+            . $moduleAppDeployToolkitCustom
+        }
+    }
+    Catch {
+        If ($mainExitCode -eq 0) {
+            [Int32]$mainExitCode = 70008
+        }
+        Write-Error -Message "Module [$moduleAppDeployToolkitCustom] failed to load: `n$($_.Exception.Message)`n `n$($_.InvocationInfo.PositionMessage)" -ErrorAction 'Continue'
+        ## Exit the script, returning the exit code to SCCM
+        If (Test-Path -LiteralPath 'variable:HostInvocation') {
+            $script:ExitCode = $mainExitCode; Exit
+        }
+        Else {
+            Exit $mainExitCode
+        }
+    }
+	
     #endregion
     ##* Do not modify section above
     ##*===============================================
